@@ -6,7 +6,7 @@ Including two projects:
 
 - ManageCustomersApi//.Net Core Api
 
-#Build project
+Build project
 ----------------------------
 1.Open one of the solution
 
