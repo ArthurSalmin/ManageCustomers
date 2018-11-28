@@ -1,6 +1,6 @@
 # ManageCustomers
 ----------------------------
-Including two projects:
+Includes two projects:
 
 - CustomerTracker//WPF
 
