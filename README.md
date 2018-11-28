@@ -1,8 +1,11 @@
 # ManageCustomers
 ----------------------------
 Including two project:
--CustomerTracker//WPF
--ManageCustomersApi//.Net Core Api
+
+- CustomerTracker//WPF
+
+- ManageCustomersApi//.Net Core Api
+
 #Build project
 ----------------------------
 1.Open one of the solution
