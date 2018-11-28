@@ -12,8 +12,8 @@ Including two projects:
 
 2.Change properties of the solution for deploying both project ine the correct order:
 
-  -ManageCustomersApi -launch
+  - ManageCustomersApi -launch
   
-  -CustomerTracker -launch
+  - CustomerTracker -launch
   
 3.Begin debugging
