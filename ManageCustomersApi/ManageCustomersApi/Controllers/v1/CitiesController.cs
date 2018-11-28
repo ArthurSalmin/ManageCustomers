@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ManageCustomersApi.Controllers.v1
 {
+    /// <summary>
+    /// Controller for city's requests to the api
+    /// </summary>
     [Route("api/v1/[controller]")]
     [ApiController]
     public class CitiesController : ControllerBase

@@ -1,6 +1,9 @@
 ﻿using System;
 namespace ManageCustomersApi.Models
 {
+    /// <summary>
+    /// Customer database model
+    /// </summary>
     public class CustomerModel
     {
         public int Id { get; set; }

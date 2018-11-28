@@ -3,6 +3,10 @@ using System.Threading.Tasks;
 
 namespace ManageCustomersApi.Interfaces
 {
+    /// <summary>
+    /// Base interface for all repositories
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
     public interface IBaseRepository<T> 
     {
         Task<T> GetAsync(int id);

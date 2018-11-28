@@ -2,6 +2,9 @@
 
 namespace CustomerTracker.Model
 {
+    /// <summary>
+    /// Customer database model
+    /// </summary>
     public class CustomerModel
     {
         public int Id { get; set; }

@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 
 namespace ManageCitysApi.Repositories
 {
+    /// <summary>
+    /// Class for operations with database
+    /// </summary>
     public class CityRepository : ICityRepository
     {
         private static string _path = Environment.CurrentDirectory + "\\ManageCustomersDb.mdf";

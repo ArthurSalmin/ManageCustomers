@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 
 namespace ManageCustomersApi.Repositories
 {
+    /// <summary>
+    /// Class for operations with database
+    /// </summary>
     public class CustomerRepository : ICustomerRepository
     {
         private static string _path = Environment.CurrentDirectory + "\\ManageCustomersDb.mdf";

@@ -97,7 +97,11 @@ namespace CustomerTracker.ViewModel
             }); }
         }
 
-
+        /// <summary>
+        /// Validate input information
+        /// </summary>
+        /// <param name="columnName"></param>
+        /// <returns></returns>
         public string this[string columnName]
         {
             get
@@ -108,28 +112,28 @@ namespace CustomerTracker.ViewModel
                     case nameof(FirstName):
                         if (string.IsNullOrEmpty(FirstName) || !FirstName.All(Char.IsLetter))
                         {
-                            error = "Поле не должно содержать символов или цифр";
+                            error = "Input field can't contain symbols or numbers";
                             CanSave = false;
                         }
                         break;
                     case nameof(Name):
                         if (string.IsNullOrEmpty(Name) || !Name.All(Char.IsLetter))
                         {
-                            error = "Поле не должно содержать символов или цифр";
+                            error = "Input field can't contain symbols or numbers";
                             CanSave = false;
                         }
                         break;
                     case nameof(Street):
                         if (string.IsNullOrEmpty(Street))
                         {
-                            error = "Поле не должно содержать символов или цифр";
+                            error = "Input field can't contain symbols or numbers";
                             CanSave = false;
                         }
                         break;
                     case nameof(DateOfBirth):
                         if (DateOfBirth.Date < StartDateTime.Date || DateOfBirth.Date > EndDateTime.Date)
                         {
-                            error = "Выберите корректную дату";
+                            error = "Choose the correct date";
                             CanSave = false;
                         }
                         break;
@@ -172,6 +176,9 @@ namespace CustomerTracker.ViewModel
             SelectedCity = customerViewModel.City;
         }
 
+        /// <summary>
+        /// Save model for sending to the server
+        /// </summary>
         public void SaveCustomer()
         {
             _customerModel.FirstName = FirstName;
