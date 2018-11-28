@@ -99,25 +99,10 @@ namespace ManageCustomersApi.Repositories
 
         public async Task<CustomerModel> PostAsync(CustomerModel obj)
         {
-            string DateOfBirth;
-            string day;
-            string month;
-            if (obj.DateOfBirth.Day < 10)
-                day = "0" + obj.DateOfBirth.Day;
-            else
-                day = obj.DateOfBirth.Day.ToString();
-            if (obj.DateOfBirth.Month < 10)
-                month = "0" + obj.DateOfBirth.Month;
-            else
-                month = obj.DateOfBirth.Month.ToString();
-
-
-            DateOfBirth = obj.DateOfBirth.Year + "-" +
-                             month + "-" +
-                             day + "T" +
-                             obj.DateOfBirth.TimeOfDay;
+            string DateOfBirth = obj.DateOfBirth.ToString("yyyy-MM-ddTHH:mm:ss");
             string queryString = "INSERT INTO Customer (Id, Name, FirstName, DateOfBirth, Street, CityId) VALUES (" +
                 $"'{obj.Id}','{obj.Name}','{obj.FirstName}','{DateOfBirth}','{obj.Street}','{obj.CityId}' )";
+
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
@@ -132,23 +117,7 @@ namespace ManageCustomersApi.Repositories
 
         public async Task<CustomerModel> PutAsync(CustomerModel obj)
         {
-            string DateOfBirth;
-            string day;
-            string month;
-            if (obj.DateOfBirth.Day < 10)
-                day = "0" + obj.DateOfBirth.Day;
-            else
-                day = obj.DateOfBirth.Day.ToString();
-            if (obj.DateOfBirth.Month < 10)
-                month = "0" + obj.DateOfBirth.Month;
-            else
-                month = obj.DateOfBirth.Month.ToString();
-
-
-            DateOfBirth = obj.DateOfBirth.Year + "-" +
-                             month + "-" +
-                             day + "T" +
-                             obj.DateOfBirth.TimeOfDay;
+            string DateOfBirth = obj.DateOfBirth.ToString("yyyy-MM-ddTHH:mm:ss");
             string queryString = $"UPDATE Customer SET " +
                 $"[Name] = @Name, " +
                 $"[FirstName] = @FirstName, " +
