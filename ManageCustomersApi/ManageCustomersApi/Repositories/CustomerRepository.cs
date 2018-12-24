@@ -67,7 +67,7 @@ namespace ManageCustomersApi.Repositories
 
         public async Task<CustomerModel> GetAsync(int id)
         {
-            string queryString = $"SELECT Name, FirstName, DateOfBirth, Street, CityId FROM Customer WHERE Id={id}";
+            string queryString = $"SELECT * FROM Customer WHERE Id={id}";
             CustomerModel getedCustomer = new CustomerModel();
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
@@ -84,6 +84,12 @@ namespace ManageCustomersApi.Repositories
                     customer.DateOfBirth = (DateTime)row["DateOfBirth"];
                     customer.Street = row["Street"].ToString();
                     customer.CityId = int.Parse(row["CityId"].ToString());
+                    customer.LockState = row["LockState"].ToString();
+                    if (row["IdLockedCustomer"].ToString() == string.Empty)
+                        customer.IdLockedCustomer = null;
+                    else
+                        customer.IdLockedCustomer = int.Parse(row["IdLockedCustomer"].ToString());
+
                     getedCustomer = customer;
                 }
                 if (getedCustomer != null)
@@ -94,6 +100,19 @@ namespace ManageCustomersApi.Repositories
                 {
                     return null;
                 }
+            }
+        }
+
+        public async Task<string> GetStatus(int idCustomer)
+        {
+            string queryString = $"SELECT LockState FROM Customer WHERE Id={idCustomer}";
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                SqlDataAdapter sqlDataAdapter = new SqlDataAdapter(queryString, connection);
+                DataTable dataTable = new DataTable();
+                sqlDataAdapter.Fill(dataTable);
+                return dataTable.Rows[0]["LockState"].ToString();
             }
         }
 
@@ -125,6 +144,7 @@ namespace ManageCustomersApi.Repositories
                 $"[Street] = @Street, " +
                 $"[CityId] = @CityId " +
                 $"WHERE (Id = @Id)";
+
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
@@ -142,5 +162,53 @@ namespace ManageCustomersApi.Repositories
                     return null;
             }
         }
+
+        public async Task<SetStatusModel> SetStatus(int idCustomer, string status, int? idLockedCustomer)
+        {
+            string queryString = $"UPDATE Customer SET " +
+                    $"[Name] = @Name, " +
+                    $"[FirstName] = @FirstName, " +
+                    $"[DateOfBirth] = @DateOfBirth, " +
+                    $"[Street] = @Street, " +
+                    $"[CityId] = @CityId, " +
+                    $"[LockState]= @LockState, " +
+                    $"[IdLockedCustomer]= @IdLockedCustomer " +
+                    $"WHERE Id= @Id";
+            string getCustomerQuery = $"Select * FROM Customer WHERE Id={idCustomer}";
+
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                var customer = await GetAsync(idCustomer);
+                if (customer != null)
+                {
+                    SqlCommand command = new SqlCommand(queryString, connection);
+                    command.Parameters.AddWithValue("Id", customer.Id);
+                    command.Parameters.AddWithValue("Name", customer.Name);
+                    command.Parameters.AddWithValue("FirstName", customer.FirstName);
+                    command.Parameters.AddWithValue("DateOfBirth", customer.DateOfBirth);
+                    command.Parameters.AddWithValue("Street", customer.Street);
+                    command.Parameters.AddWithValue("CityId", customer.CityId);
+                    command.Parameters.AddWithValue("LockState", status);
+                    if(idLockedCustomer == null)
+                        command.Parameters.AddWithValue("IdLockedCustomer", string.Empty);
+                    else
+                        command.Parameters.AddWithValue("IdLockedCustomer", idLockedCustomer);
+                    int updatedCustomer = await command.ExecuteNonQueryAsync();
+                    if (updatedCustomer > 0)
+                        return new SetStatusModel
+                        {
+                            IdCustomer = idCustomer,
+                            Status = status,
+                            IdLockedCustomer = idLockedCustomer
+                        };
+                    else
+                        return null;
+                }
+                else
+                    return null;
+            }
+        }
+
     }
 }

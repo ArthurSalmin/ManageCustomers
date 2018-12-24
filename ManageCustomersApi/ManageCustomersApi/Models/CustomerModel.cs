@@ -12,5 +12,7 @@ namespace ManageCustomersApi.Models
         public string Street { get; set; }
         public DateTime DateOfBirth { get; set; }
         public int CityId { get; set; }
+        public string LockState { get; set; }
+        public int? IdLockedCustomer { get; set; }
     }
 }

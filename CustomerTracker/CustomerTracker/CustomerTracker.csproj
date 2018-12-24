@@ -79,12 +79,18 @@
     </ApplicationDefinition>
     <Compile Include="Model\CityModel.cs" />
     <Compile Include="Model\CustomerModel.cs" />
+    <Compile Include="Model\SetStatusModel.cs" />
     <Compile Include="ViewModel\CityViewModel.cs" />
     <Compile Include="ViewModel\CustomerDialogViewModel.cs" />
     <Compile Include="ViewModel\CustomerViewModel.cs" />
+    <Compile Include="ViewModel\LockedCustomerDialogViewModel.cs" />
     <Compile Include="ViewModel\MainViewModel.cs" />
     <Compile Include="ViewModel\ViewModelLocator.cs" />
     <Page Include="Views\CustomerDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\LockedCustomerDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -98,6 +104,9 @@
     </Compile>
     <Compile Include="Views\CustomerDialog.xaml.cs">
       <DependentUpon>CustomerDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\LockedCustomerDialog.xaml.cs">
+      <DependentUpon>LockedCustomerDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>

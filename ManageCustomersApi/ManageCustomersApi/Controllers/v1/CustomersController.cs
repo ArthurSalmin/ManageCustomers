@@ -102,5 +102,26 @@ namespace ManageCustomersApi.Controllers.v1
                 return NotFound();
             }
         }
+
+        [Route("setStatus")]
+        [HttpPut]
+        public async Task<IActionResult> SetStatus([FromBody]SetStatusModel model)
+        {
+            var statusModel = await _customerRepository.SetStatus(model.IdCustomer, model.Status, model.IdLockedCustomer);
+            if (statusModel != null)
+                return Ok(statusModel);
+            else
+                return BadRequest();
+        }
+        
+        [HttpGet("getStatus/{id}")]
+        public async Task<IActionResult> GetStatus(int id)
+        {
+            string status = await _customerRepository.GetStatus(id);
+            if (status != null)
+                return Ok(status);
+            else
+                return null;
+        }
     }
 }

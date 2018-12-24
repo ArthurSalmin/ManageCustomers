@@ -122,26 +122,50 @@ namespace CustomerTracker.ViewModel
                 return _editCommand = new RelayCommand(async () =>
                 {
                     var vm = new CustomerDialogViewModel(SelectedCustomer);
-                    var customerDialog = new CustomerDialog() { Owner = Application.Current.MainWindow, DataContext = vm };
-                    
-                    if (customerDialog.ShowDialog() == true)
+                    string customerStatus = await GetStatusCode(SelectedCustomer.Id);
+                    if (customerStatus == "\"online\"")
                     {
-                        CustomerModel newCustomer = new CustomerModel
-                        {
-                            Id = vm.CustomerViewModel.Id,
-                            Name = vm.CustomerViewModel.Name,
-                            FirstName = vm.CustomerViewModel.FirstName,
-                            DateOfBirth = vm.CustomerViewModel.DateOfBirth,
-                            Street = vm.CustomerViewModel.Street,
-                            CityId = vm.SelectedCity.Id
-                        };
+                        await SetStatus(SelectedCustomer.Id, "busy");
+                        var customerDialog = new CustomerDialog() { Owner = Application.Current.MainWindow, DataContext = vm };
 
-                        newCustomer = await UpdateCustomerAsync(newCustomer);
-                        if (newCustomer == null)
+                        if (customerDialog.ShowDialog() == true)
                         {
-                            MessageBox.Show($"Can't edit customer", "Error", MessageBoxButton.OK);
+                            //string finalCustomerStatus = await GetStatusCode(SelectedCustomer.Id);
+                            CustomerModel newCustomer = new CustomerModel
+                            {
+                                Id = vm.CustomerViewModel.Id,
+                                Name = vm.CustomerViewModel.Name,
+                                FirstName = vm.CustomerViewModel.FirstName,
+                                DateOfBirth = vm.CustomerViewModel.DateOfBirth,
+                                Street = vm.CustomerViewModel.Street,
+                                CityId = vm.SelectedCity.Id
+                            };
+
+                            newCustomer = await UpdateCustomerAsync(newCustomer);
+                            
+                            if (newCustomer == null)
+                            {
+                                MessageBox.Show($"Can't edit customer", "Error", MessageBoxButton.OK);
+                            }
                         }
+                        await SetStatus(SelectedCustomer.Id, "online");
+                        await GetCustomers();
                     }
+                    else
+                    {
+                        MessageBoxResult result = MessageBox.Show("This customer is busy at the moment, try again later", "Error");
+                        //var customerDialog = new LockedCustomerDialog() { Owner = Application.Current.MainWindow};
+                        //if (customerDialog.ShowDialog() == true)
+                        //{
+                        //    string s = "todo create dialog with vm values readonly";
+                        //}
+                        //else if (customerDialog.ShowDialog() == false)
+                        //{
+                        //    string s = "todo force edit vm";
+                        //}
+                        
+                    }
+
                 }, () => SelectedCustomer != null);
             }
         }
@@ -243,6 +267,53 @@ namespace CustomerTracker.ViewModel
             }
             else
                 return null;
+        }
+
+        private async Task<string> GetStatusCode(int idCustomer)
+        {
+            string path = $"api/v1/customers/getStatus/{idCustomer}";
+            HttpResponseMessage response = client.GetAsync(path).Result;
+            string status = null;
+            if (response.IsSuccessStatusCode)
+            {
+                status = await response.Content.ReadAsStringAsync();
+            }
+            return status;
+        }
+
+        private async Task<SetStatusModel> SetStatus(int idSelectedCustomer, string status)
+        {
+            SetStatusModel statusModel;
+            if (status == "busy")
+            {
+                Random rnd = new Random();
+                statusModel = new SetStatusModel
+                {
+                    IdCustomer = SelectedCustomer.Id,
+                    Status = status,
+                    IdLockedCustomer = rnd.Next(200)
+                };
+            }
+            else if (status == "online")
+            {
+                statusModel = new SetStatusModel
+                {
+                    IdCustomer = SelectedCustomer.Id,
+                    Status = status,
+                    IdLockedCustomer = null
+                };
+            }
+            else
+            {
+                throw new Exception("Set correct status!!!");
+            }
+
+            HttpResponseMessage response = await client.PutAsJsonAsync(
+                "api/v1/customers/setStatus", statusModel);
+            response.EnsureSuccessStatusCode();
+
+            statusModel = await response.Content.ReadAsAsync<SetStatusModel>();
+            return statusModel;
         }
 
         private async Task<CustomerModel> UpdateCustomerAsync(CustomerModel customer)

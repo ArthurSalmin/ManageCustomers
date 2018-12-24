@@ -15,7 +15,7 @@ namespace CustomerTracker.ViewModel
         static ViewModelLocator()
         {
             ServiceLocator.SetLocatorProvider(() => SimpleIoc.Default);
-
+            
             SimpleIoc.Default.Register<MainViewModel>();
         }
 
