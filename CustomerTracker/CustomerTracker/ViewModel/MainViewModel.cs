@@ -122,30 +122,33 @@ namespace CustomerTracker.ViewModel
                 return _editCommand = new RelayCommand(async () =>
                 {
                     var vm = new CustomerDialogViewModel(SelectedCustomer);
-                    string customerStatus = await GetStatusCode(SelectedCustomer.Id);
-                    if (customerStatus == "\"online\"")
+                    var startCustomerModel = await GetStatusCode(SelectedCustomer.Id);
+                    if (startCustomerModel.Status == "online")
                     {
-                        await SetStatus(SelectedCustomer.Id, "busy");
+                        SetStatusModel statusModel = await SetStatus(SelectedCustomer.Id, "busy");
                         var customerDialog = new CustomerDialog() { Owner = Application.Current.MainWindow, DataContext = vm };
 
                         if (customerDialog.ShowDialog() == true)
                         {
-                            //string finalCustomerStatus = await GetStatusCode(SelectedCustomer.Id);
-                            CustomerModel newCustomer = new CustomerModel
+                            var finalStatusModel = await GetStatusCode(SelectedCustomer.Id);
+                            if (finalStatusModel.IdUserLocked != statusModel.IdUserLocked)
                             {
-                                Id = vm.CustomerViewModel.Id,
-                                Name = vm.CustomerViewModel.Name,
-                                FirstName = vm.CustomerViewModel.FirstName,
-                                DateOfBirth = vm.CustomerViewModel.DateOfBirth,
-                                Street = vm.CustomerViewModel.Street,
-                                CityId = vm.SelectedCity.Id
-                            };
+                                MessageBox.Show($"Can't edit customer because another user forced such control", "Error", MessageBoxButton.OK);
+                                return;
+                            }
+                            else
+                            {
+                                CustomerModel newCustomer = new CustomerModel
+                                {
+                                    Id = vm.CustomerViewModel.Id,
+                                    Name = vm.CustomerViewModel.Name,
+                                    FirstName = vm.CustomerViewModel.FirstName,
+                                    DateOfBirth = vm.CustomerViewModel.DateOfBirth,
+                                    Street = vm.CustomerViewModel.Street,
+                                    CityId = vm.SelectedCity.Id
+                                };
 
-                            newCustomer = await UpdateCustomerAsync(newCustomer);
-                            
-                            if (newCustomer == null)
-                            {
-                                MessageBox.Show($"Can't edit customer", "Error", MessageBoxButton.OK);
+                                newCustomer = await UpdateCustomerAsync(newCustomer);
                             }
                         }
                         await SetStatus(SelectedCustomer.Id, "online");
@@ -153,17 +156,45 @@ namespace CustomerTracker.ViewModel
                     }
                     else
                     {
-                        MessageBoxResult result = MessageBox.Show("This customer is busy at the moment, try again later", "Error");
-                        //var customerDialog = new LockedCustomerDialog() { Owner = Application.Current.MainWindow};
-                        //if (customerDialog.ShowDialog() == true)
-                        //{
-                        //    string s = "todo create dialog with vm values readonly";
-                        //}
-                        //else if (customerDialog.ShowDialog() == false)
-                        //{
-                        //    string s = "todo force edit vm";
-                        //}
-                        
+                        MessageBoxResult result = MessageBox.Show("This customer is busy at the moment, try again later", "Error", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+                        if (result == MessageBoxResult.Yes)
+                        {
+                            vm.Readonly = true;
+                            var customerDialog = new CustomerDialog() { Owner = Application.Current.MainWindow, DataContext = vm };
+                            if (customerDialog.ShowDialog() == true)
+                            {
+
+                            }
+                        }
+                        else if (result == MessageBoxResult.No)
+                        {
+                            SetStatusModel statusModel = await SetStatus(SelectedCustomer.Id, "busy");
+                            var customerDialog = new CustomerDialog() { Owner = Application.Current.MainWindow, DataContext = vm };
+                            if (customerDialog.ShowDialog() == true)
+                            {
+                                var finalCustomerStatus = await GetStatusCode(SelectedCustomer.Id);
+                                if (finalCustomerStatus.IdUserLocked != statusModel.IdUserLocked)
+                                {
+                                    MessageBox.Show($"Can't edit customer because another user forced such control", "Error", MessageBoxButton.OK);
+                                }
+                                else
+                                {
+                                    CustomerModel newCustomer = new CustomerModel
+                                    {
+                                        Id = vm.CustomerViewModel.Id,
+                                        Name = vm.CustomerViewModel.Name,
+                                        FirstName = vm.CustomerViewModel.FirstName,
+                                        DateOfBirth = vm.CustomerViewModel.DateOfBirth,
+                                        Street = vm.CustomerViewModel.Street,
+                                        CityId = vm.SelectedCity.Id
+                                    };
+
+                                    newCustomer = await UpdateCustomerAsync(newCustomer);
+                                    await SetStatus(SelectedCustomer.Id, "online");
+                                }
+                            }
+                            await GetCustomers();
+                        }
                     }
 
                 }, () => SelectedCustomer != null);
@@ -269,16 +300,16 @@ namespace CustomerTracker.ViewModel
                 return null;
         }
 
-        private async Task<string> GetStatusCode(int idCustomer)
+        internal async Task<SetStatusModel> GetStatusCode(int idCustomer)
         {
             string path = $"api/v1/customers/getStatus/{idCustomer}";
             HttpResponseMessage response = client.GetAsync(path).Result;
-            string status = null;
+            SetStatusModel statusModel = new SetStatusModel();
             if (response.IsSuccessStatusCode)
             {
-                status = await response.Content.ReadAsStringAsync();
+                statusModel = await response.Content.ReadAsAsync<SetStatusModel>();
             }
-            return status;
+            return statusModel;
         }
 
         private async Task<SetStatusModel> SetStatus(int idSelectedCustomer, string status)
@@ -291,7 +322,7 @@ namespace CustomerTracker.ViewModel
                 {
                     IdCustomer = SelectedCustomer.Id,
                     Status = status,
-                    IdLockedCustomer = rnd.Next(200)
+                    IdUserLocked = rnd.Next(200)
                 };
             }
             else if (status == "online")
@@ -300,7 +331,7 @@ namespace CustomerTracker.ViewModel
                 {
                     IdCustomer = SelectedCustomer.Id,
                     Status = status,
-                    IdLockedCustomer = null
+                    IdUserLocked = null
                 };
             }
             else

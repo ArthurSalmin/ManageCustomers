@@ -85,10 +85,10 @@ namespace ManageCustomersApi.Repositories
                     customer.Street = row["Street"].ToString();
                     customer.CityId = int.Parse(row["CityId"].ToString());
                     customer.LockState = row["LockState"].ToString();
-                    if (row["IdLockedCustomer"].ToString() == string.Empty)
-                        customer.IdLockedCustomer = null;
+                    if (row["IdUserLocked"].ToString() == string.Empty)
+                        customer.IdUserLocked = null;
                     else
-                        customer.IdLockedCustomer = int.Parse(row["IdLockedCustomer"].ToString());
+                        customer.IdUserLocked = int.Parse(row["IdUserLocked"].ToString());
 
                     getedCustomer = customer;
                 }
@@ -103,16 +103,25 @@ namespace ManageCustomersApi.Repositories
             }
         }
 
-        public async Task<string> GetStatus(int idCustomer)
+        public async Task<SetStatusModel> GetStatus(int idCustomer)
         {
-            string queryString = $"SELECT LockState FROM Customer WHERE Id={idCustomer}";
+            string queryString = $"SELECT LockState, IdUserLocked FROM Customer WHERE Id={idCustomer}";
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
                 SqlDataAdapter sqlDataAdapter = new SqlDataAdapter(queryString, connection);
                 DataTable dataTable = new DataTable();
                 sqlDataAdapter.Fill(dataTable);
-                return dataTable.Rows[0]["LockState"].ToString();
+
+                SetStatusModel setStatusModel = new SetStatusModel();
+                setStatusModel.IdCustomer = idCustomer;
+                setStatusModel.Status = dataTable.Rows[0]["LockState"].ToString();
+                if (dataTable.Rows[0]["IdUserLocked"] == DBNull.Value)
+                    setStatusModel.IdUserLocked = null;
+                else
+                    setStatusModel.IdUserLocked = int.Parse(dataTable.Rows[0]["IdUserLocked"].ToString());
+                setStatusModel.Status = dataTable.Rows[0]["LockState"].ToString();
+                return setStatusModel;
             }
         }
 
@@ -153,8 +162,8 @@ namespace ManageCustomersApi.Repositories
                 command.Parameters.AddWithValue("Name", obj.Name);
                 command.Parameters.AddWithValue("FirstName", obj.FirstName);
                 command.Parameters.AddWithValue("DateOfBirth", DateOfBirth);
-                command.Parameters.AddWithValue("Street", obj.Street);
-                command.Parameters.AddWithValue("CityId", obj.CityId);
+                if (obj.Street == null) command.Parameters.AddWithValue("Street", DBNull.Value); else command.Parameters.AddWithValue("Street", obj.Street);
+                if (obj.CityId == null) command.Parameters.AddWithValue("CityId", DBNull.Value); else command.Parameters.AddWithValue("CityId", obj.Street);
                 int updatedCustomer = await command.ExecuteNonQueryAsync();
                 if (updatedCustomer > 0)
                     return obj;
@@ -163,7 +172,7 @@ namespace ManageCustomersApi.Repositories
             }
         }
 
-        public async Task<SetStatusModel> SetStatus(int idCustomer, string status, int? idLockedCustomer)
+        public async Task<SetStatusModel> SetStatus(int idCustomer, string status, int? IdUserLocked)
         {
             string queryString = $"UPDATE Customer SET " +
                     $"[Name] = @Name, " +
@@ -172,7 +181,7 @@ namespace ManageCustomersApi.Repositories
                     $"[Street] = @Street, " +
                     $"[CityId] = @CityId, " +
                     $"[LockState]= @LockState, " +
-                    $"[IdLockedCustomer]= @IdLockedCustomer " +
+                    $"[IdUserLocked]= @IdUserLocked " +
                     $"WHERE Id= @Id";
             string getCustomerQuery = $"Select * FROM Customer WHERE Id={idCustomer}";
 
@@ -187,20 +196,17 @@ namespace ManageCustomersApi.Repositories
                     command.Parameters.AddWithValue("Name", customer.Name);
                     command.Parameters.AddWithValue("FirstName", customer.FirstName);
                     command.Parameters.AddWithValue("DateOfBirth", customer.DateOfBirth);
-                    command.Parameters.AddWithValue("Street", customer.Street);
-                    command.Parameters.AddWithValue("CityId", customer.CityId);
+                    if(customer.Street == null) command.Parameters.AddWithValue("Street", DBNull.Value); else command.Parameters.AddWithValue("Street", customer.Street);
+                    if(customer.CityId == null) command.Parameters.AddWithValue("CityId", DBNull.Value); else command.Parameters.AddWithValue("CityId", customer.Street);
                     command.Parameters.AddWithValue("LockState", status);
-                    if(idLockedCustomer == null)
-                        command.Parameters.AddWithValue("IdLockedCustomer", string.Empty);
-                    else
-                        command.Parameters.AddWithValue("IdLockedCustomer", idLockedCustomer);
+                    if(IdUserLocked == null) command.Parameters.AddWithValue("IdUserLocked", DBNull.Value); else command.Parameters.AddWithValue("IdUserLocked", IdUserLocked);
                     int updatedCustomer = await command.ExecuteNonQueryAsync();
                     if (updatedCustomer > 0)
                         return new SetStatusModel
                         {
                             IdCustomer = idCustomer,
                             Status = status,
-                            IdLockedCustomer = idLockedCustomer
+                            IdUserLocked = IdUserLocked
                         };
                     else
                         return null;

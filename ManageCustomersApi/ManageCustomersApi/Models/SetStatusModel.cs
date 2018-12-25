@@ -9,6 +9,6 @@ namespace ManageCustomersApi.Models
     {
         public int IdCustomer { get; set; }
         public string Status { get; set; }
-        public int? IdLockedCustomer { get; set; }
+        public int? IdUserLocked { get; set; }
     }
 }

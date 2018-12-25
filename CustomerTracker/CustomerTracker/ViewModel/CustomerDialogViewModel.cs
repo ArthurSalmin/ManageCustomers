@@ -16,6 +16,17 @@ namespace CustomerTracker.ViewModel
         private CityViewModel _selectedCity;
         private RelayCommand _resetCommand;
         private bool _canSave;
+        private bool _readonly;
+
+        public bool Readonly
+        {
+            get { return _readonly; }
+            set
+            {
+                _readonly = value;
+                RaisePropertyChanged(nameof(Readonly));
+            }
+        }
 
         public string FirstName
         {
