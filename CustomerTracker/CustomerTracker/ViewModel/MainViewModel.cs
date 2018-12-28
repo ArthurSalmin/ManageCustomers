@@ -125,6 +125,7 @@ namespace CustomerTracker.ViewModel
                     var startCustomerModel = await GetStatusCode(SelectedCustomer.Id);
                     if (startCustomerModel.Status == "online")
                     {
+
                         SetStatusModel statusModel = await SetStatus(SelectedCustomer.Id, "busy");
                         var customerDialog = new CustomerDialog() { Owner = Application.Current.MainWindow, DataContext = vm };
 
@@ -134,7 +135,6 @@ namespace CustomerTracker.ViewModel
                             if (finalStatusModel.IdUserLocked != statusModel.IdUserLocked)
                             {
                                 MessageBox.Show($"Can't edit customer because another user forced such control", "Error", MessageBoxButton.OK);
-                                return;
                             }
                             else
                             {
@@ -145,13 +145,15 @@ namespace CustomerTracker.ViewModel
                                     FirstName = vm.CustomerViewModel.FirstName,
                                     DateOfBirth = vm.CustomerViewModel.DateOfBirth,
                                     Street = vm.CustomerViewModel.Street,
-                                    CityId = vm.SelectedCity.Id
+                                    CityId = vm.SelectedCity.Id,
+                                    IdUser = finalStatusModel.IdUserLocked
+                                    
                                 };
 
                                 newCustomer = await UpdateCustomerAsync(newCustomer);
+                                await SetStatus(SelectedCustomer.Id, "online");
                             }
                         }
-                        await SetStatus(SelectedCustomer.Id, "online");
                         await GetCustomers();
                     }
                     else
@@ -179,6 +181,7 @@ namespace CustomerTracker.ViewModel
                                 }
                                 else
                                 {
+                                    
                                     CustomerModel newCustomer = new CustomerModel
                                     {
                                         Id = vm.CustomerViewModel.Id,
@@ -186,13 +189,15 @@ namespace CustomerTracker.ViewModel
                                         FirstName = vm.CustomerViewModel.FirstName,
                                         DateOfBirth = vm.CustomerViewModel.DateOfBirth,
                                         Street = vm.CustomerViewModel.Street,
-                                        CityId = vm.SelectedCity.Id
+                                        CityId = vm.SelectedCity.Id,
+                                        IdUser = finalCustomerStatus.IdUserLocked
                                     };
 
                                     newCustomer = await UpdateCustomerAsync(newCustomer);
-                                    await SetStatus(SelectedCustomer.Id, "online");
+                                    
                                 }
                             }
+                            await SetStatus(SelectedCustomer.Id, "online");
                             await GetCustomers();
                         }
                     }
@@ -314,15 +319,17 @@ namespace CustomerTracker.ViewModel
 
         private async Task<SetStatusModel> SetStatus(int idSelectedCustomer, string status)
         {
+            Random rnd = new Random();
+            int user = rnd.Next(200);
+
             SetStatusModel statusModel;
             if (status == "busy")
             {
-                Random rnd = new Random();
                 statusModel = new SetStatusModel
                 {
                     IdCustomer = SelectedCustomer.Id,
                     Status = status,
-                    IdUserLocked = rnd.Next(200)
+                    IdUserLocked = user
                 };
             }
             else if (status == "online")

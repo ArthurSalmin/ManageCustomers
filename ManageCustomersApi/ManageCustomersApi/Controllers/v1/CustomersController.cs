@@ -42,7 +42,10 @@ namespace ManageCustomersApi.Controllers.v1
         public async Task<IActionResult> GetAll()
         {
             var customers = await _customerRepository.GetAllAsync();
-            return Ok(customers);
+            if (customers.Count == 0)
+                return NotFound();
+            else
+                return Ok(customers);
         }
 
         [HttpGet("{id}")]

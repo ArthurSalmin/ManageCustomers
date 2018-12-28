@@ -14,5 +14,6 @@ namespace ManageCustomersApi.Models
         public int? CityId { get; set; }
         public string LockState { get; set; }
         public int? IdUserLocked { get; set; }
+        public int? IdUser { get; set; }
     }
 }

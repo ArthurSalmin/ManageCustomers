@@ -7,5 +7,6 @@ namespace ManageCustomersApi.Interfaces
     {
         Task<SetStatusModel> SetStatus(int idCustomer, string status, int? IdUserLocked);
         Task<SetStatusModel> GetStatus(int idCustomer);
+        Task<int> GetCountMigrations();
     }
 }

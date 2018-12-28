@@ -35,7 +35,13 @@ namespace ManageCustomersApi.Repositories
 
         public async Task<List<CustomerModel>> GetAllAsync()
         {
-            string queryString = "SELECT * FROM Customer";
+            string queryString = "SELECT DISTINCT cust.Id, cust.Name, cust.FirstName, cust.DateOfBirth, cust.LockState, " +
+                                  "cust.IdUserLocked, cm1.TimeOfMigration, cm1.Street, cm1.IdCity "+
+                                  "FROM customermigrations cm1 "+
+                                  "LEFT JOIN customermigrations cm2 ON cm1.TimeOfMigration < cm2.TimeOfMigration " +
+                                  "AND cm1.IdCustomer = cm2.IdCustomer "+
+                                  "INNER JOIN customer cust ON cm1.IdCustomer = cust.Id "+
+                                  "WHERE cm2.Id IS NULL";
             List<CustomerModel> customersList = new List<CustomerModel>();
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
@@ -50,24 +56,26 @@ namespace ManageCustomersApi.Repositories
                     customer.Name = row["Name"].ToString();
                     customer.FirstName = row["FirstName"].ToString();
                     customer.DateOfBirth = (DateTime)row["DateOfBirth"];
-                    customer.Street = row["Street"].ToString();
-                    customer.CityId = int.Parse(row["CityId"].ToString());
+                    customer.LockState = row["LockState"].ToString();
+                    if (row["Street"] == DBNull.Value) customer.Street = null; else customer.Street = row["Street"].ToString();
+                    if (row["IdUserLocked"] == DBNull.Value) customer.IdUserLocked = null; else customer.IdUserLocked = int.Parse(row["IdUserLocked"].ToString());
+                    if (row["IdCity"] == DBNull.Value) customer.CityId = null; else customer.CityId = int.Parse(row["IdCity"].ToString());
                     customersList.Add(customer);
                 }
             }
-            if (customersList != null)
-            {
-                return customersList;
-            }
-            else
-            {
-                return null;
-            }
+            return customersList;
         }
 
         public async Task<CustomerModel> GetAsync(int id)
         {
-            string queryString = $"SELECT * FROM Customer WHERE Id={id}";
+            string queryString = "SELECT cust.Id, cust.Name, cust.FirstName, cust.DateOfBirth, cust.LockState, " +
+                                  "cust.IdUserLocked, cm1.TimeOfMigration, cm1.Street, cm1.IdCity " +
+                                  "FROM customermigrations cm1 " +
+                                  "LEFT JOIN customermigrations cm2 ON cm1.TimeOfMigration < cm2.TimeOfMigration " +
+                                  "AND cm1.IdCustomer = cm2.IdCustomer " +
+                                  "INNER JOIN customer cust ON cm1.IdCustomer = cust.Id " +
+                                  $"AND cust.Id = {id} " +
+                                  "WHERE cm2.Id IS NULL";
             CustomerModel getedCustomer = new CustomerModel();
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
@@ -83,16 +91,12 @@ namespace ManageCustomersApi.Repositories
                     customer.FirstName = row["FirstName"].ToString();
                     customer.DateOfBirth = (DateTime)row["DateOfBirth"];
                     customer.Street = row["Street"].ToString();
-                    customer.CityId = int.Parse(row["CityId"].ToString());
+                    customer.CityId = int.Parse(row["IdCity"].ToString());
                     customer.LockState = row["LockState"].ToString();
-                    if (row["IdUserLocked"].ToString() == string.Empty)
-                        customer.IdUserLocked = null;
-                    else
-                        customer.IdUserLocked = int.Parse(row["IdUserLocked"].ToString());
-
+                    if (row["IdUserLocked"] == DBNull.Value) customer.IdUserLocked = null; else customer.IdUserLocked = int.Parse(row["IdUserLocked"].ToString());
                     getedCustomer = customer;
                 }
-                if (getedCustomer != null)
+                if (getedCustomer.Name != null)
                 {
                     return getedCustomer;
                 }
@@ -103,9 +107,32 @@ namespace ManageCustomersApi.Repositories
             }
         }
 
+        public async Task<int> GetCountMigrations()
+        {
+            int idMigration = 0;
+            string queryCountMigrations = "SELECT COUNT(*) FROM CustomerMigrations";
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                SqlCommand countMigrCommand = new SqlCommand(queryCountMigrations, connection);
+
+                idMigration = (int)await countMigrCommand.ExecuteScalarAsync() + 1;
+                if (idMigration != 0)
+                {
+                    return idMigration;
+                }
+                else
+                    return 0;
+            }
+        }
+
         public async Task<SetStatusModel> GetStatus(int idCustomer)
         {
-            string queryString = $"SELECT LockState, IdUserLocked FROM Customer WHERE Id={idCustomer}";
+            string queryString = "SELECT " +
+                "LockState, " +
+                "IdUserLocked " +
+                $"FROM Customer WHERE Id={idCustomer}";
+
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
@@ -128,16 +155,28 @@ namespace ManageCustomersApi.Repositories
         public async Task<CustomerModel> PostAsync(CustomerModel obj)
         {
             string DateOfBirth = obj.DateOfBirth.ToString("yyyy-MM-ddTHH:mm:ss");
-            string queryString = "INSERT INTO Customer (Id, Name, FirstName, DateOfBirth, Street, CityId) VALUES (" +
-                $"'{obj.Id}','{obj.Name}','{obj.FirstName}','{DateOfBirth}','{obj.Street}','{obj.CityId}' )";
-
+            string DateOfMigration = DateTime.Today.ToString("yyyy-MM-ddTHH:mm:ss");
+            string queryStringCustomer = "INSERT INTO Customer (Id, Name, FirstName, TimeOfMigration, DateOfBirth, LockState)" +
+                $" VALUES ('{obj.Id}','{obj.Name}','{obj.FirstName}','{DateOfMigration}', '{DateOfBirth}','online' )";
+            int idMigration = 0;
+            
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
-                SqlCommand command = new SqlCommand(queryString, connection);
-                int newCustomer = await command.ExecuteNonQueryAsync();
-                if (newCustomer > 0)
+                SqlCommand newCustomerCommand = new SqlCommand(queryStringCustomer, connection);
+
+                idMigration = await GetCountMigrations();
+                string queryStringCustomerMigrations = "INSERT INTO CustomerMigrations(Id, IdCity, Street, IdCustomer) " +
+                $"VALUES('{idMigration}', '{obj.CityId}', '{obj.Street}', '{obj.Id}')";
+
+                SqlCommand newCustomerMigrCommand = new SqlCommand(queryStringCustomerMigrations, connection);
+                int newCustomer = await newCustomerCommand.ExecuteNonQueryAsync();
+                int newMigration = await newCustomerMigrCommand.ExecuteNonQueryAsync();
+                if (newCustomer > 0 && newMigration > 0)
+                {
+                    obj.LockState = "online";
                     return obj;
+                }
                 else
                     return null;
             }
@@ -146,29 +185,65 @@ namespace ManageCustomersApi.Repositories
         public async Task<CustomerModel> PutAsync(CustomerModel obj)
         {
             string DateOfBirth = obj.DateOfBirth.ToString("yyyy-MM-ddTHH:mm:ss");
-            string queryString = $"UPDATE Customer SET " +
+            string queryCustomerString = $"UPDATE Customer SET " +
                 $"[Name] = @Name, " +
                 $"[FirstName] = @FirstName, " +
-                $"[DateOfBirth] = @DateOfBirth, " +
-                $"[Street] = @Street, " +
-                $"[CityId] = @CityId " +
+                $"[DateOfBirth] = @DateOfBirth " +
                 $"WHERE (Id = @Id)";
+            string DateOfMigration = DateTime.Today.ToString("yyyy-MM-ddTHH:mm:ss");
+            int countMigrations = 0;
+            
 
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
-                SqlCommand command = new SqlCommand(queryString, connection);
-                command.Parameters.AddWithValue("Id", obj.Id);
-                command.Parameters.AddWithValue("Name", obj.Name);
-                command.Parameters.AddWithValue("FirstName", obj.FirstName);
-                command.Parameters.AddWithValue("DateOfBirth", DateOfBirth);
-                if (obj.Street == null) command.Parameters.AddWithValue("Street", DBNull.Value); else command.Parameters.AddWithValue("Street", obj.Street);
-                if (obj.CityId == null) command.Parameters.AddWithValue("CityId", DBNull.Value); else command.Parameters.AddWithValue("CityId", obj.Street);
-                int updatedCustomer = await command.ExecuteNonQueryAsync();
+                SqlCommand updateCustomerCommand = new SqlCommand(queryCustomerString, connection);
+                
+
+                updateCustomerCommand.Parameters.AddWithValue("Id", obj.Id);
+                updateCustomerCommand.Parameters.AddWithValue("Name", obj.Name);
+                updateCustomerCommand.Parameters.AddWithValue("FirstName", obj.FirstName);
+                updateCustomerCommand.Parameters.AddWithValue("DateOfBirth", DateOfBirth);
+                int updatedCustomer = await updateCustomerCommand.ExecuteNonQueryAsync();
+
+                if (await IsNewMigration(obj.CityId, obj.Street, obj.Id))
+                {
+                    countMigrations = await GetCountMigrations();
+                    string queryNewMigration = "INSERT INTO CustomerMigrations (Id, IdCity, Street, TimeOfMigration, IdUser, IdCustomer) " +
+                                       $"VALUES ('{countMigrations}', '{obj.CityId}', '{obj.Street}', '{DateOfMigration}', " +
+                                       $"'{obj.IdUser}', '{obj.Id}')";
+                    SqlCommand newCustomerMigration = new SqlCommand(queryNewMigration, connection);
+                    int newMigration = await newCustomerMigration.ExecuteNonQueryAsync();
+                    if (newMigration == 0)
+                        return null;
+                }
                 if (updatedCustomer > 0)
                     return obj;
                 else
                     return null;
+            }
+        }
+
+        private async Task<bool> IsNewMigration(int? CityId, string Street, int IdCustomer)
+        {
+            string queryPlaceString = "SELECT CustomerMigrations.IdCity, CustomerMigrations.Street " +
+                                      $"FROM CustomerMigrations WHERE CustomerMigrations.IdCustomer={IdCustomer}";
+
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                SqlDataAdapter getCustomerMigrationCommand = new SqlDataAdapter(queryPlaceString, connection);
+                DataTable dataTable = new DataTable();
+                getCustomerMigrationCommand.Fill(dataTable);
+
+                int idCity = int.Parse(dataTable.Rows[0]["IdCity"].ToString());
+                string street = dataTable.Rows[0]["Street"].ToString();
+
+                if (CityId != idCity || Street != street)
+                    return true;
+                else
+                    return false;
+
             }
         }
 
@@ -178,12 +253,9 @@ namespace ManageCustomersApi.Repositories
                     $"[Name] = @Name, " +
                     $"[FirstName] = @FirstName, " +
                     $"[DateOfBirth] = @DateOfBirth, " +
-                    $"[Street] = @Street, " +
-                    $"[CityId] = @CityId, " +
                     $"[LockState]= @LockState, " +
                     $"[IdUserLocked]= @IdUserLocked " +
                     $"WHERE Id= @Id";
-            string getCustomerQuery = $"Select * FROM Customer WHERE Id={idCustomer}";
 
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
@@ -196,10 +268,8 @@ namespace ManageCustomersApi.Repositories
                     command.Parameters.AddWithValue("Name", customer.Name);
                     command.Parameters.AddWithValue("FirstName", customer.FirstName);
                     command.Parameters.AddWithValue("DateOfBirth", customer.DateOfBirth);
-                    if(customer.Street == null) command.Parameters.AddWithValue("Street", DBNull.Value); else command.Parameters.AddWithValue("Street", customer.Street);
-                    if(customer.CityId == null) command.Parameters.AddWithValue("CityId", DBNull.Value); else command.Parameters.AddWithValue("CityId", customer.Street);
                     command.Parameters.AddWithValue("LockState", status);
-                    if(IdUserLocked == null) command.Parameters.AddWithValue("IdUserLocked", DBNull.Value); else command.Parameters.AddWithValue("IdUserLocked", IdUserLocked);
+                    if (IdUserLocked == null) command.Parameters.AddWithValue("IdUserLocked", DBNull.Value); else command.Parameters.AddWithValue("IdUserLocked", IdUserLocked);
                     int updatedCustomer = await command.ExecuteNonQueryAsync();
                     if (updatedCustomer > 0)
                         return new SetStatusModel
