@@ -40,7 +40,7 @@ namespace ManageCustomersApi.Repositories
                                   "FROM customermigrations cm1 "+
                                   "LEFT JOIN customermigrations cm2 ON cm1.TimeOfMigration < cm2.TimeOfMigration " +
                                   "AND cm1.IdCustomer = cm2.IdCustomer "+
-                                  "INNER JOIN customer cust ON cm1.IdCustomer = cust.Id "+
+                                  "RIGHT JOIN customer cust ON cm1.IdCustomer = cust.Id AND cm1.IdCity > 0 "+
                                   "WHERE cm2.Id IS NULL";
             List<CustomerModel> customersList = new List<CustomerModel>();
             using (SqlConnection connection = new SqlConnection(_connectionString))
@@ -156,18 +156,28 @@ namespace ManageCustomersApi.Repositories
         {
             string DateOfBirth = obj.DateOfBirth.ToString("yyyy-MM-ddTHH:mm:ss");
             string DateOfMigration = DateTime.Today.ToString("yyyy-MM-ddTHH:mm:ss");
-            string queryStringCustomer = "INSERT INTO Customer (Id, Name, FirstName, TimeOfMigration, DateOfBirth, LockState)" +
-                $" VALUES ('{obj.Id}','{obj.Name}','{obj.FirstName}','{DateOfMigration}', '{DateOfBirth}','online' )";
-            int idMigration = 0;
             
+            string queryIdMigration = "SELECT MAX(Id) FROM CustomerMigrations";
+            string queryIdCustomer = "SELECT MAX(Id) FROM Customer";
+            int idMigration = 0;
+            int idCustomer = 0;
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
+                
+                SqlCommand getIdMigrationCommand = new SqlCommand(queryIdMigration, connection);
+                SqlCommand getIdCustomerCommand = new SqlCommand(queryIdCustomer, connection);
+                
+                idMigration = (int)await getIdMigrationCommand.ExecuteScalarAsync() + 1;
+                idCustomer = (int)await getIdCustomerCommand.ExecuteScalarAsync() + 1;
+
+                string queryStringCustomer = "INSERT INTO Customer (Id, Name, FirstName, DateOfBirth, LockState)" +
+                $" VALUES ('{idCustomer}','{obj.Name}','{obj.FirstName}', '{DateOfBirth}','online' )";
+
                 SqlCommand newCustomerCommand = new SqlCommand(queryStringCustomer, connection);
 
-                idMigration = await GetCountMigrations();
-                string queryStringCustomerMigrations = "INSERT INTO CustomerMigrations(Id, IdCity, Street, IdCustomer) " +
-                $"VALUES('{idMigration}', '{obj.CityId}', '{obj.Street}', '{obj.Id}')";
+                string queryStringCustomerMigrations = "INSERT INTO CustomerMigrations(Id, IdCity, Street, IdCustomer, TimeOfMigration, IdUser) " +
+                $"VALUES('{idMigration}', '0', '{obj.Street}', '{obj.Id}', '{DateOfMigration}', '{obj.IdUser}')";
 
                 SqlCommand newCustomerMigrCommand = new SqlCommand(queryStringCustomerMigrations, connection);
                 int newCustomer = await newCustomerCommand.ExecuteNonQueryAsync();
@@ -184,43 +194,50 @@ namespace ManageCustomersApi.Repositories
 
         public async Task<CustomerModel> PutAsync(CustomerModel obj)
         {
-            string DateOfBirth = obj.DateOfBirth.ToString("yyyy-MM-ddTHH:mm:ss");
-            string queryCustomerString = $"UPDATE Customer SET " +
-                $"[Name] = @Name, " +
-                $"[FirstName] = @FirstName, " +
-                $"[DateOfBirth] = @DateOfBirth " +
-                $"WHERE (Id = @Id)";
-            string DateOfMigration = DateTime.Today.ToString("yyyy-MM-ddTHH:mm:ss");
-            int countMigrations = 0;
-            
-
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
-                SqlCommand updateCustomerCommand = new SqlCommand(queryCustomerString, connection);
-                
-
-                updateCustomerCommand.Parameters.AddWithValue("Id", obj.Id);
-                updateCustomerCommand.Parameters.AddWithValue("Name", obj.Name);
-                updateCustomerCommand.Parameters.AddWithValue("FirstName", obj.FirstName);
-                updateCustomerCommand.Parameters.AddWithValue("DateOfBirth", DateOfBirth);
-                int updatedCustomer = await updateCustomerCommand.ExecuteNonQueryAsync();
-
-                if (await IsNewMigration(obj.CityId, obj.Street, obj.Id))
+                if (obj.FirstName != null)
                 {
-                    countMigrations = await GetCountMigrations();
-                    string queryNewMigration = "INSERT INTO CustomerMigrations (Id, IdCity, Street, TimeOfMigration, IdUser, IdCustomer) " +
-                                       $"VALUES ('{countMigrations}', '{obj.CityId}', '{obj.Street}', '{DateOfMigration}', " +
-                                       $"'{obj.IdUser}', '{obj.Id}')";
-                    SqlCommand newCustomerMigration = new SqlCommand(queryNewMigration, connection);
-                    int newMigration = await newCustomerMigration.ExecuteNonQueryAsync();
-                    if (newMigration == 0)
+                    string DateOfBirth = obj.DateOfBirth.ToString("yyyy-MM-ddTHH:mm:ss");
+                    string queryCustomerString = $"UPDATE Customer SET " +
+                        $"[Name] = @Name, " +
+                        $"[FirstName] = @FirstName, " +
+                        $"[DateOfBirth] = @DateOfBirth " +
+                        $"WHERE (Id = @Id)";
+                    SqlCommand updateCustomerCommand = new SqlCommand(queryCustomerString, connection);
+
+                    updateCustomerCommand.Parameters.AddWithValue("Id", obj.Id);
+                    updateCustomerCommand.Parameters.AddWithValue("Name", obj.Name);
+                    updateCustomerCommand.Parameters.AddWithValue("FirstName", obj.FirstName);
+                    updateCustomerCommand.Parameters.AddWithValue("DateOfBirth", DateOfBirth);
+                    int updatedCustomer = await updateCustomerCommand.ExecuteNonQueryAsync();
+                    if (updatedCustomer > 0)
+                        return obj;
+                    else
                         return null;
                 }
-                if (updatedCustomer > 0)
-                    return obj;
                 else
-                    return null;
+                {
+                    if (await IsNewMigration(obj.CityId, obj.Street, obj.Id))
+                    {
+                        string queryIdMigration = "SELECT MAX(Id) FROM CustomerMigrations";
+                        SqlCommand getMaxIdMigrationCommand = new SqlCommand(queryIdMigration, connection);
+
+                        int countMigrations = (int)await getMaxIdMigrationCommand.ExecuteScalarAsync() + 1;
+                        string DateOfMigration = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss");
+                        string queryNewMigration = "INSERT INTO CustomerMigrations (Id, IdCity, Street, TimeOfMigration, IdUser, IdCustomer) " +
+                                           $"VALUES ('{countMigrations}', '{obj.CityId}', '{obj.Street}', '{DateOfMigration}', " +
+                                           $"'{obj.IdUser}', '{obj.Id}')";
+                        SqlCommand newCustomerMigration = new SqlCommand(queryNewMigration, connection);
+                        int newMigration = await newCustomerMigration.ExecuteNonQueryAsync();
+                        if (newMigration > 0)
+                            return obj;
+                        else
+                            return null;
+                    }
+                }
+                return obj;
             }
         }
 

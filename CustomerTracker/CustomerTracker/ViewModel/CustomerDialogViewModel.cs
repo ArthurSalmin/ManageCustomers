@@ -11,9 +11,7 @@ namespace CustomerTracker.ViewModel
         private CustomerViewModel _customerModel;
         private string _firstName;
         private string _name;
-        private string _street;
         private DateTime _dateOfBirth;
-        private CityViewModel _selectedCity;
         private RelayCommand _resetCommand;
         private bool _canSave;
         private bool _readonly;
@@ -49,18 +47,7 @@ namespace CustomerTracker.ViewModel
                 RaisePropertyChanged(nameof(Name));
             }
         }
-
-        public string Street
-        {
-            get { return _street; }
-            set
-            {
-                _street = value;
-                CanSave = true;
-                RaisePropertyChanged(nameof(Street));
-            }
-        }
-
+        
         public DateTime DateOfBirth
         {
             get { return _dateOfBirth; }
@@ -83,27 +70,14 @@ namespace CustomerTracker.ViewModel
             get { return DateTime.Today; }
             set { throw new NotImplementedException(); }
         }
-
-        public CityViewModel SelectedCity
-        {
-            get { return _selectedCity; }
-            set
-            {
-                _selectedCity = value;
-                RaisePropertyChanged(nameof(SelectedCity));
-            }
-        }
-
-
+        
         public RelayCommand ResetCommand
         {
             get { return _resetCommand = new RelayCommand(() =>
             {
                 FirstName = _customerModel.FirstName;
                 Name = _customerModel.Name;
-                Street = _customerModel.Street;
                 DateOfBirth = _customerModel.DateOfBirth;
-                SelectedCity = _customerModel.City;
                 RaisePropertyChanged(nameof(DateOfBirth));
             }); }
         }
@@ -134,13 +108,7 @@ namespace CustomerTracker.ViewModel
                             CanSave = false;
                         }
                         break;
-                    case nameof(Street):
-                        if (string.IsNullOrEmpty(Street))
-                        {
-                            error = "Input field can't contain symbols or numbers";
-                            CanSave = false;
-                        }
-                        break;
+                    
                     case nameof(DateOfBirth):
                         if (DateOfBirth.Date < StartDateTime.Date || DateOfBirth.Date > EndDateTime.Date)
                         {
@@ -182,9 +150,7 @@ namespace CustomerTracker.ViewModel
             _customerModel = customerViewModel;
             _firstName = customerViewModel.FirstName;
             _name = customerViewModel.Name;
-            _street = customerViewModel.Street;
             _dateOfBirth = customerViewModel.DateOfBirth;
-            SelectedCity = customerViewModel.City;
         }
 
         /// <summary>
@@ -195,8 +161,6 @@ namespace CustomerTracker.ViewModel
             _customerModel.FirstName = FirstName;
             _customerModel.Name = Name;
             _customerModel.DateOfBirth = DateOfBirth;
-            _customerModel.Street = Street;
-            _customerModel.City = SelectedCity;
 
             _customerModel.ReSaveModel();
         }

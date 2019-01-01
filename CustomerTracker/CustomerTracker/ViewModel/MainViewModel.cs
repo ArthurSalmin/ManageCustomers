@@ -21,13 +21,19 @@ namespace CustomerTracker.ViewModel
     {
         private ObservableCollection<CustomerViewModel> _customers = new ObservableCollection<CustomerViewModel>();
         private ObservableCollection<CityViewModel> _cities = new ObservableCollection<CityViewModel>();
+        private ObservableCollection<CityViewModel> _citiesForDrop = new ObservableCollection<CityViewModel>();
         private RelayCommand _addCommand;
         private RelayCommand _editCommand;
         private RelayCommand _removeCommand;
+        private RelayCommand _editMigrationsCommand;
         private CustomerViewModel _selectedCustomer;
         private ICollectionView _customerView;
         private string _filterString = string.Empty;
         private static HttpClient client = new HttpClient();
+
+        Random rnd = new Random();
+        int user = 0;
+        
 
         public ObservableCollection<CustomerViewModel> Customers
         {
@@ -39,9 +45,19 @@ namespace CustomerTracker.ViewModel
             }
         }
 
+        public ObservableCollection<CityViewModel> CitiesForDrop
+        {
+            get { return _citiesForDrop; }
+            set
+            {
+                _citiesForDrop = value;
+                RaisePropertyChanged(nameof(CitiesForDrop));
+            }
+        }
+
         public ObservableCollection<CityViewModel> Cities
         {
-            get { return _cities; }
+            get { return _cities ; }
             set
             {
                 _cities = value;
@@ -76,6 +92,17 @@ namespace CustomerTracker.ViewModel
             }
         }
 
+        private int GetMaxIdCust()
+        {
+            int max = Customers[0].Id;
+            for (int i = 0; i < Customers.Count; i++)
+            {
+                if (Customers[i].Id > max)
+                    max = Customers[i].Id;
+            }
+            return max;
+        }
+
         public RelayCommand AddCustomer
         {
             get
@@ -86,14 +113,15 @@ namespace CustomerTracker.ViewModel
                     var customerDialog = new CustomerDialog() { Owner = Application.Current.MainWindow, DataContext = vm };
                     if (customerDialog.ShowDialog() == true)
                     {
+                        Random range = new Random();
+
                         CustomerModel newCustomer = new CustomerModel
                         {
-                            Id = Customers.Count + 1,
+                            Id = GetMaxIdCust() + 1,
                             Name = vm.CustomerViewModel.Name,
                             FirstName = vm.CustomerViewModel.FirstName,
                             DateOfBirth = vm.CustomerViewModel.DateOfBirth,
-                            Street = vm.CustomerViewModel.Street,
-                            CityId = vm.SelectedCity.Id
+                            IdUser = user
                         };
                         var result = await CreateCustomerAsync(newCustomer);
                         if (result == HttpStatusCode.OK)
@@ -144,16 +172,16 @@ namespace CustomerTracker.ViewModel
                                     Name = vm.CustomerViewModel.Name,
                                     FirstName = vm.CustomerViewModel.FirstName,
                                     DateOfBirth = vm.CustomerViewModel.DateOfBirth,
-                                    Street = vm.CustomerViewModel.Street,
-                                    CityId = vm.SelectedCity.Id,
                                     IdUser = finalStatusModel.IdUserLocked
                                     
                                 };
 
                                 newCustomer = await UpdateCustomerAsync(newCustomer);
-                                await SetStatus(SelectedCustomer.Id, "online");
                             }
                         }
+                        var endStatusModel = await GetStatusCode(SelectedCustomer.Id);
+                        if (endStatusModel.IdUserLocked == user)
+                            await SetStatus(SelectedCustomer.Id, "online");
                         await GetCustomers();
                     }
                     else
@@ -188,8 +216,6 @@ namespace CustomerTracker.ViewModel
                                         Name = vm.CustomerViewModel.Name,
                                         FirstName = vm.CustomerViewModel.FirstName,
                                         DateOfBirth = vm.CustomerViewModel.DateOfBirth,
-                                        Street = vm.CustomerViewModel.Street,
-                                        CityId = vm.SelectedCity.Id,
                                         IdUser = finalCustomerStatus.IdUserLocked
                                     };
 
@@ -197,7 +223,97 @@ namespace CustomerTracker.ViewModel
                                     
                                 }
                             }
+                            var endStatusModel = await GetStatusCode(SelectedCustomer.Id);
+                            if (endStatusModel.IdUserLocked == user)
+                                await SetStatus(SelectedCustomer.Id, "online");
+                            await GetCustomers();
+                        }
+                    }
+
+                }, () => SelectedCustomer != null);
+            }
+        }
+
+        public RelayCommand EditCustomerMigrations
+        {
+            get
+            {
+                return _editMigrationsCommand = new RelayCommand(async () =>
+                {
+                    var vm = new CustomerMigrationDialogViewModel(SelectedCustomer);
+                    var startCustomerModel = await GetStatusCode(SelectedCustomer.Id);
+                    if (startCustomerModel.Status == "online")
+                    {
+                        SetStatusModel statusModel = await SetStatus(SelectedCustomer.Id, "busy");
+                        var customerDialog = new CustomerMigrationDialog() { Owner = Application.Current.MainWindow, DataContext = vm };
+
+                        if (customerDialog.ShowDialog() == true)
+                        {
+                            var finalStatusModel = await GetStatusCode(SelectedCustomer.Id);
+                            if (finalStatusModel.IdUserLocked != statusModel.IdUserLocked)
+                            {
+                                MessageBox.Show($"Can't edit customer because another user forced editing", "Error", MessageBoxButton.OK);
+                            }
+                            else
+                            {
+                                CustomerModel newMigration = new CustomerModel
+                                {
+                                    Id = vm.CustomerViewModel.Id,
+                                    IdUser = finalStatusModel.IdUserLocked,
+                                    CityId = vm.SelectedCity.Id,
+                                    Street = vm.Street
+                                };
+
+                                newMigration = await UpdateCustomerAsync(newMigration);
+                                
+                            }
+                        }
+                        var endStatusModel = await GetStatusCode(SelectedCustomer.Id);
+                        if (endStatusModel.IdUserLocked == user)
                             await SetStatus(SelectedCustomer.Id, "online");
+                        await GetCustomers();
+                    }
+                    else
+                    {
+                        MessageBoxResult result = MessageBox.Show("This customer is busy at the moment, try again later", "Error", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+                        if (result == MessageBoxResult.Yes)
+                        {
+                            vm.Readonly = true;
+                            var customerDialog = new CustomerMigrationDialog() { Owner = Application.Current.MainWindow, DataContext = vm };
+                            if (customerDialog.ShowDialog() == true)
+                            {
+
+                            }
+                        }
+                        else if (result == MessageBoxResult.No)
+                        {
+                            SetStatusModel statusModel = await SetStatus(SelectedCustomer.Id, "busy");
+                            var customerDialog = new CustomerMigrationDialog() { Owner = Application.Current.MainWindow, DataContext = vm };
+                            if (customerDialog.ShowDialog() == true)
+                            {
+                                var finalStatusModel = await GetStatusCode(SelectedCustomer.Id);
+                                if (finalStatusModel.IdUserLocked != statusModel.IdUserLocked)
+                                {
+                                    MessageBox.Show($"Can't edit customer because another user forced editing", "Error", MessageBoxButton.OK);
+                                }
+                                else
+                                {
+
+                                    CustomerModel newMigration = new CustomerModel
+                                    {
+                                        Id = vm.CustomerViewModel.Id,
+                                        IdUser = finalStatusModel.IdUserLocked,
+                                        CityId = vm.SelectedCity.Id,
+                                        Street = vm.Street
+                                    };
+
+                                    newMigration = await UpdateCustomerAsync(newMigration);
+
+                                }
+                            }
+                            var endStatusModel = await GetStatusCode(SelectedCustomer.Id);
+                            if (endStatusModel.IdUserLocked == user)
+                                await SetStatus(SelectedCustomer.Id, "online");
                             await GetCustomers();
                         }
                     }
@@ -246,11 +362,18 @@ namespace CustomerTracker.ViewModel
         {
             SetClient();
 
+            user = rnd.Next(0, 200);
             List<CityModel> cityModels = await GetCities();
             List<CustomerModel> customerModels = await GetCustomers();
             foreach (var item in cityModels)
             {
                 _cities.Add(new CityViewModel(item));
+            }
+
+            foreach (var item in cityModels)
+            {
+                if(item.Id != 0)
+                    _citiesForDrop.Add(new CityViewModel(item));
             }
 
             foreach (var item in customerModels)
@@ -319,9 +442,7 @@ namespace CustomerTracker.ViewModel
 
         private async Task<SetStatusModel> SetStatus(int idSelectedCustomer, string status)
         {
-            Random rnd = new Random();
-            int user = rnd.Next(200);
-
+            
             SetStatusModel statusModel;
             if (status == "busy")
             {

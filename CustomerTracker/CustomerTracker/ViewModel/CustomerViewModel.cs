@@ -46,7 +46,13 @@ namespace CustomerTracker.ViewModel
 
         public string Street
         {
-            get { return _street; }
+            get
+            {
+                if (_street != null)
+                    return _street;
+                else
+                    return string.Empty;
+            }
             set
             {
                 _street = value;
@@ -76,7 +82,20 @@ namespace CustomerTracker.ViewModel
 
         public string CityName
         {
-            get { return _city.Name; }
+            get
+            {
+                if (_city != null)
+                {
+                    if (_city.Name != "WithoutMigrations")
+                        return _city.Name;
+                    else
+                        return "WithoutMigrations";
+                }
+                else
+                {
+                    return "WithoutMigrations";
+                }
+            }
         }
 
         public CustomerViewModel(CustomerModel customerModel, CityViewModel city)

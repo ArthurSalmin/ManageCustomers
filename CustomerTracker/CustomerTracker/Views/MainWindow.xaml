@@ -39,6 +39,9 @@
             <Button Command="{Binding RemoveCustomer}" ToolTip="Remove Selected Customer">
                 <Image Source="{StaticResource RemoveImage}" />
             </Button>
+            <Button Command="{Binding EditCustomerMigrations}" ToolTip="Edit Migration of Selected Customer">
+                <Image Source="{StaticResource EditImage}" />
+            </Button>
         </DockPanel>
 
         <DockPanel DockPanel.Dock="Top">

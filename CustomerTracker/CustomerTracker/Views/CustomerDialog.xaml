@@ -81,22 +81,7 @@
                         </Binding>
                     </TextBox.Text>
                 </TextBox>
-                <TextBlock Text="Street:" />
-                <TextBox>
-                    <TextBox.Text>
-                        <Binding Path="Street" UpdateSourceTrigger="PropertyChanged">
-                            <Binding.ValidationRules>
-                                <DataErrorValidationRule />
-                            </Binding.ValidationRules>
-                        </Binding>
-                    </TextBox.Text>
-                </TextBox>
-                <TextBlock Text="City:" />
-                <ComboBox
-                    Margin="5"
-                    DisplayMemberPath="Name"
-                    ItemsSource="{Binding Source={StaticResource Locator}, Path=Main.Cities, UpdateSourceTrigger=PropertyChanged}"
-                    SelectedItem="{Binding SelectedCity}" />
+                
                 <TextBlock Text="Birth Date:" />
                 <DatePicker
                     DisplayDate="{Binding DateOfBirth}"

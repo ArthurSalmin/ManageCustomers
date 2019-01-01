@@ -15,7 +15,7 @@ namespace CustomerTracker.Views
         {
             InitializeComponent();
         }
-
+        
         public RelayCommand SaveCommand
         {
             get { return _saveCommand = new RelayCommand(() =>
