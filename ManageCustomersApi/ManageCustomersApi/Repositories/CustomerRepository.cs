@@ -224,10 +224,10 @@ namespace ManageCustomersApi.Repositories
                         string queryIdMigration = "SELECT MAX(Id) FROM CustomerMigrations";
                         SqlCommand getMaxIdMigrationCommand = new SqlCommand(queryIdMigration, connection);
 
-                        int countMigrations = (int)await getMaxIdMigrationCommand.ExecuteScalarAsync() + 1;
+                        int idMigration = (int)await getMaxIdMigrationCommand.ExecuteScalarAsync() + 1;
                         string DateOfMigration = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss");
                         string queryNewMigration = "INSERT INTO CustomerMigrations (Id, IdCity, Street, TimeOfMigration, IdUser, IdCustomer) " +
-                                           $"VALUES ('{countMigrations}', '{obj.CityId}', '{obj.Street}', '{DateOfMigration}', " +
+                                           $"VALUES ('{idMigration}', '{obj.CityId}', '{obj.Street}', '{DateOfMigration}', " +
                                            $"'{obj.IdUser}', '{obj.Id}')";
                         SqlCommand newCustomerMigration = new SqlCommand(queryNewMigration, connection);
                         int newMigration = await newCustomerMigration.ExecuteNonQueryAsync();

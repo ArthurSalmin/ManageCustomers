@@ -162,7 +162,7 @@ namespace CustomerTracker.ViewModel
                             var finalStatusModel = await GetStatusCode(SelectedCustomer.Id);
                             if (finalStatusModel.IdUserLocked != statusModel.IdUserLocked)
                             {
-                                MessageBox.Show($"Can't edit customer because another user forced such control", "Error", MessageBoxButton.OK);
+                                MessageBox.Show($"Can't edit customer because another user forced editing", "Error", MessageBoxButton.OK);
                             }
                             else
                             {
@@ -205,7 +205,7 @@ namespace CustomerTracker.ViewModel
                                 var finalCustomerStatus = await GetStatusCode(SelectedCustomer.Id);
                                 if (finalCustomerStatus.IdUserLocked != statusModel.IdUserLocked)
                                 {
-                                    MessageBox.Show($"Can't edit customer because another user forced such control", "Error", MessageBoxButton.OK);
+                                    MessageBox.Show($"Can't edit customer because another user forced editing", "Error", MessageBoxButton.OK);
                                 }
                                 else
                                 {
