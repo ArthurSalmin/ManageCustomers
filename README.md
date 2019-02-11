@@ -8,12 +8,14 @@ Includes two projects:
 
 Build project
 ----------------------------
-1.Open one of the solution
+1.Downdload .Net Core 2.1
 
-2.Change properties of the solution for deploying both project in the correct order:
+2.Open the solution in the ManageCustomersApi
+
+3.(If it needs)Change properties of the solution for deploying both project in the correct order:
 
   - ManageCustomersApi -launch
   
   - CustomerTracker -launch
   
-3.Begin debugging
+4.Begin debugging
